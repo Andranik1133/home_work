@@ -1,0 +1,9 @@
+.hidden {
+  display: none;
+}
+.modal {
+  background-color: #000;
+  color: #fff;
+  z-index: 100;
+}
+
