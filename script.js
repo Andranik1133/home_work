@@ -87,21 +87,33 @@ const inputLoanAmount = document.querySelector('.form__input--loan-amount'); //�
 const inputCloseUsername = document.querySelector('.form__input--user'); //մուտքագրել Փակել օգտվողի անունը
 const inputClosePin = document.querySelector('.form__input--pin'); //մուտքագրել Փակել փին
 
+const formatMovmentDate = function (date) {
+  const calcDaysPassed = (date1, date2) =>
+    Math.round(Math.abs(date1 - date2) / (1000 * 60 * 60 * 24));
+
+  const daysPassed = calcDaysPassed(new Date(), date);
+
+  if (daysPassed === 0) return 'Today';
+  if (daysPassed === 1) return 'Yesterday';
+  if (daysPassed <= 7) return `${daysPassed} days ago`;
+  else {
+    const day = `${date.getDate()}`.padStart(2, 0);
+    const month = `${date.getMonth() + 1}`.padStart(2, 0);
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+};
+
 const displayMovements = function (acc, sort = false) {
   containerMovements.innerHTML = '';
-  console.log(acc.movements);
   const movs = sort
     ? acc.movements.slice().sort((a, b) => a - b)
     : acc.movements;
 
   movs.forEach(function (mov, i) {
     const type = mov > 0 ? 'deposit' : 'withdrawal';
-
     const date = new Date(acc.movementsDates[i]);
-    const day = `${date.getDate()}`.padStart(2, 0);
-    const month = `${date.getMonth() + 1}`.padStart(2, 0);
-    const year = date.getFullYear();
-    const displayDate = `${day}/${month}/${year}`;
+    const displayDate = formatMovmentDate(date);
 
     const html = `
      <div class="movements__row">
@@ -160,12 +172,34 @@ const updateUI = function (acc) {
   calcDisplaySummary(acc);
 };
 
-// Event handler
-let currentAccount;
+const startLogOutTimer = function () {
+  const tick = function () {
+    const min = String(Math.trunc(time / 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
+    labelTimer.textContent = `${min}:${sec}`;
 
-currentAccount = account1;
-updateUI(currentAccount);
-containerApp.style.opacity = 100;
+    if (time === 0) {
+      clearInterval(timer);
+      labelWelcome.textContent = 'Login in to get started';
+      containerApp.style.opacity = 0;
+    }
+    time--;
+  };
+  let time = 15;
+  tick();
+  const timer = setInterval(tick, 1000);
+  return timer;
+};
+
+// Event handler
+let currentAccount, timer;
+
+// currentAccount = account1;
+// updateUI(currentAccount);
+// containerApp.style.opacity = 100;
+
+const now = new Date();
+labelDate.textContent = new Intl.DateTimeFormat('ru-RU').format(now);
 
 btnLogin.addEventListener('click', function (e) {
   e.preventDefault();
@@ -194,7 +228,13 @@ btnLogin.addEventListener('click', function (e) {
     inputLoginUsername.value = inputLoginPin.value = '';
     inputLoginPin.blur();
 
+    if (timer) clearInterval(timer);
+    timer = startLogOutTimer();
+
     updateUI(currentAccount);
+
+    clearInterval(timer);
+    timer = startLogOutTimer();
   }
 });
 
@@ -230,12 +270,17 @@ btnLoan.addEventListener('click', function (e) {
   const amount = Number(inputLoanAmount.value);
 
   if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
-    currentAccount.movements.push(amount);
+    setTimeout(function () {
+      currentAccount.movements.push(amount);
 
-    currentAccount.movementsDates.push(new Date().toISOString());
+      currentAccount.movementsDates.push(new Date().toISOString());
 
-    // update UI
-    updateUI(currentAccount);
+      // update UI
+      updateUI(currentAccount);
+
+      clearInterval(timer);
+      timer = startLogOutTimer();
+    }, 2500);
   }
 
   inputLoanAmount.value = '';
